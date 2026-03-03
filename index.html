@@ -872,7 +872,7 @@ function createParticles() {
 
 async function checkApiHealth() {
   try {
-    const res = await fetch('/api/health');
+    const res = await fetch('https://ankit-007-bg-remove-api.hf.space/api/remove-bg-image');
     const data = await res.json();
     if (data.status === 'ok') {
       showToast('AI Background Remover is ready!', 'success');
@@ -1095,7 +1095,7 @@ async function processSingleFile() {
   }
 
   const isVideo = singleFile.type.startsWith('video/');
-  const endpoint = isVideo ? '/api/process/video' : '/api/process/image';
+  const endpoint = isVideo ? 'https://ankit-007-bg-remove-api.hf.space/api/remove-bg-image';
 
   showSingleState('processing');
   document.getElementById('single-process-btn').disabled = true;
