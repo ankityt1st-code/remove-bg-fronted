@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Background Remover | Remove BG from Images & Videos</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --gradient-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-card: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      --accent: #7c3aed;
+      --accent-light: #8b5cf6;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background: #0a0a14;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      color: #e2e8f0;
+    }
+
+    /* Animated gradient background */
+    .hero-bg {
+      background: linear-gradient(135deg, #0a0a14 0%, #1a0533 50%, #0a0a14 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at center, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+      animation: pulse-bg 8s ease-in-out infinite;
+    }
+    @keyframes pulse-bg {
+      0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+      50% { transform: scale(1.1) rotate(5deg); opacity: 1; }
+    }
+
+    /* Glass morphism cards */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+    }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed rgba(124, 58, 237, 0.4);
+      border-radius: 20px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      background: rgba(124, 58, 237, 0.03);
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #7c3aed;
+      background: rgba(124, 58, 237, 0.08);
+      transform: scale(1.01);
+    }
+    .upload-zone.drag-over {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Background selection buttons */
+    .bg-btn {
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.03);
+      color: #94a3b8;
+    }
+    .bg-btn:hover { border-color: #7c3aed; color: #e2e8f0; background: rgba(124,58,237,0.1); }
+    .bg-btn.active { border-color: #7c3aed; background: rgba(124,58,237,0.2); color: #fff; box-shadow: 0 0 20px rgba(124,58,237,0.3); }
+
+    /* Process button */
+    .btn-process {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-process::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.5s;
+    }
+    .btn-process:hover::before { left: 100%; }
+    .btn-process:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124,58,237,0.4); }
+    .btn-process:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Download button */
+    .btn-download {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .btn-download:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+    .btn-download.secondary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+    }
+    .btn-download.secondary:hover { box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+
+    /* Progress bar */
+    .progress-bar {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      overflow: hidden;
+      height: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7c3aed, #06b6d4);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { to { left: 100%; } }
+
+    /* Preview container */
+    .preview-container {
+      position: relative;
+      display: inline-block;
+      overflow: hidden;
+      border-radius: 16px;
+    }
+    .compare-slider {
+      position: absolute;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: white;
+      cursor: ew-resize;
+      left: 50%;
+    }
+    .compare-slider::before {
+      content: '◄ ►';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      color: #333;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    /* Tab navigation */
+    .tab-btn {
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.25s;
+      color: #64748b;
+      background: transparent;
+    }
+    .tab-btn.active {
+      background: rgba(124,58,237,0.2);
+      color: #a78bfa;
+      box-shadow: 0 0 0 1px rgba(124,58,237,0.4);
+    }
+    .tab-btn:hover:not(.active) {
+      background: rgba(255,255,255,0.05);
+      color: #94a3b8;
+    }
+
+    /* File preview thumbnails */
+    .file-thumb {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid rgba(124,58,237,0.3);
+    }
+
+    /* Result preview */
+    .result-image {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+
+    /* Checkered background for transparent preview */
+    .checkerboard {
+      background-image:
+        linear-gradient(45deg, #333 25%, transparent 25%),
+        linear-gradient(-45deg, #333 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #333 75%),
+        linear-gradient(-45deg, transparent 75%, #333 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: #1a1a1a;
+    }
+
+    /* Floating particles */
+    .particle {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      opacity: 0.15;
+      animation: float-up linear infinite;
+    }
+    @keyframes float-up {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 0.15; }
+      90% { opacity: 0.15; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+
+    /* Color picker wrapper */
+    .color-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+    }
+    .color-picker-wrap input[type="color"] {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+
+    /* Stats bar */
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      font-size: 12px;
+      font-weight: 600;
+      color: #a78bfa;
+    }
+
+    /* Animations */
+    .fade-in { animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+    ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 3px; }
+
+    /* Notification toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast.success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+    .toast.info { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+
+    /* Feature cards */
+    .feature-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      border-color: rgba(124,58,237,0.3);
+      background: rgba(124,58,237,0.05);
+      transform: translateY(-3px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Floating particles -->
+<div id="particles"></div>
+
+<!-- Header -->
+<header class="hero-bg relative z-10">
+  <div class="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center">
+        <i class="fas fa-magic text-white text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white leading-none">AI BG Remover</h1>
+        <p class="text-xs text-purple-400">Powered by U2Net</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="stat-badge"><i class="fas fa-bolt"></i> AI Powered</span>
+      <span class="stat-badge"><i class="fas fa-film"></i> Image & Video</span>
+      <span class="stat-badge"><i class="fas fa-layer-group"></i> Bulk Mode</span>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <div class="max-w-4xl mx-auto px-6 py-16 text-center relative z-10">
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-6 text-purple-300"
+         style="background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);">
+      <i class="fas fa-sparkles"></i>
+      State-of-the-art AI Background Removal
+    </div>
+    <h2 class="text-5xl font-black text-white mb-4 leading-tight">
+      Remove Backgrounds<br>
+      <span style="background: linear-gradient(135deg, #a78bfa, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        with AI Precision
+      </span>
+    </h2>
+    <p class="text-lg text-slate-400 max-w-2xl mx-auto">
+      Upload images or videos — our AI instantly removes backgrounds.<br>
+      Set custom colors, bulk process files, and download in 4K quality.
+    </p>
+  </div>
+</header>
+
+<!-- Main App -->
+<main class="max-w-7xl mx-auto px-6 py-8 relative z-10">
+
+  <!-- Tab Navigation -->
+  <div class="flex items-center gap-2 mb-8 p-2 glass-card inline-flex">
+    <button class="tab-btn active" onclick="switchTab('single')" id="tab-single">
+      <i class="fas fa-image mr-2"></i>Single File
+    </button>
+    <button class="tab-btn" onclick="switchTab('bulk')" id="tab-bulk">
+      <i class="fas fa-layer-group mr-2"></i>Bulk Upload
+    </button>
+  </div>
+
+  <!-- SINGLE FILE TAB -->
+  <div id="tab-content-single" class="fade-in">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 main-grid">
+
+      <!-- Left Panel: Upload + Settings -->
+      <div class="space-y-6">
+
+        <!-- Upload Zone -->
+        <div class="glass-card p-6">
+          <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+            <i class="fas fa-upload text-purple-400"></i>Upload File
+          </h3>
+
+          <div class="upload-zone p-10 text-center"
+               id="single-drop-zone"
+               onclick="document.getElementById('single-file-input').click()"
+               ondragover="handleDragOver(event, 'single-drop-zone')"
+               ondragleave="handleDragLeave('single-drop-zone')"
+               ondrop="handleDrop(event, 'single')">
+
+            <div id="single-upload-placeholder">
+              <div class="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                   style="background: rgba(124,58,237,0.15);">
+                <i class="fas fa-cloud-upload-alt text-3xl text-purple-400"></i>
+              </div>
+              <p class="text-white font-semibold text-lg mb-2">Drop your file here</p>
+              <p class="text-slate-400 text-sm mb-4">or click to browse</p>
+              <div class="flex justify-center gap-3 flex-wrap">
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-purple-900/40 text-purple-300 border border-purple-700/40">JPG</span>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-purple-900/40 text-purple-300 border border-purple-700/40">PNG</span>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-purple-900/40 text-purple-300 border border-purple-700/40">WEBP</span>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-900/40 text-indigo-300 border border-indigo-700/40">MP4</span>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-900/40 text-indigo-300 border border-indigo-700/40">MOV</span>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-900/40 text-indigo-300 border border-indigo-700/40">AVI</span>
+              </div>
+            </div>
+
+            <div id="single-file-preview" class="hidden">
+              <div class="flex items-center gap-4 justify-center">
+                <div id="single-thumb-container"></div>
+                <div class="text-left">
+                  <p id="single-file-name" class="text-white font-semibold"></p>
+                  <p id="single-file-size" class="text-slate-400 text-sm"></p>
+                  <button onclick="clearSingleFile(event)" class="mt-2 text-xs text-red-400 hover:text-red-300">
+                    <i class="fas fa-times mr-1"></i>Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <input type="file" id="single-file-input" class="hidden"
+                 accept="image/*,video/*"
+                 onchange="handleSingleFileSelect(event)"/>
+        </div>
+
+        <!-- Background Settings -->
+        <div class="glass-card p-6">
+          <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+            <i class="fas fa-palette text-purple-400"></i>Background Settings
+          </h3>
+
+          <!-- BG Type Buttons -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <button class="bg-btn active" id="bg-btn-transparent" onclick="selectBg('transparent')">
+              <div class="w-5 h-5 rounded-full border-2 border-dashed border-current opacity-60"></div>
+              Transparent
+            </button>
+            <button class="bg-btn" id="bg-btn-white" onclick="selectBg('white')">
+              <div class="w-5 h-5 rounded-full border-2 border-white/40" style="background:white"></div>
+              White
+            </button>
+            <button class="bg-btn" id="bg-btn-black" onclick="selectBg('black')">
+              <div class="w-5 h-5 rounded-full border-2 border-gray-600" style="background:#111"></div>
+              Black
+            </button>
+            <button class="bg-btn" id="bg-btn-custom" onclick="selectBg('custom')">
+              <i class="fas fa-fill-drip"></i>
+              Custom Color
+            </button>
+          </div>
+
+          <!-- Custom Color Picker -->
+          <div id="custom-color-section" class="hidden mb-4">
+            <div class="color-picker-wrap">
+              <input type="color" id="custom-color-picker" value="#ff6b9d" onchange="updateCustomColor()"/>
+              <div>
+                <p class="text-white font-semibold text-sm">Pick a Color</p>
+                <p id="color-hex-display" class="text-slate-400 text-xs">#ff6b9d</p>
+              </div>
+              <div id="color-preview-dot" class="w-10 h-10 rounded-lg ml-auto" style="background: #ff6b9d;"></div>
+            </div>
+            <!-- Preset colors -->
+            <div class="flex gap-2 mt-3 flex-wrap">
+              <p class="text-xs text-slate-500 w-full mb-1">Quick Presets:</p>
+              <button onclick="setPresetColor('#ff6b9d')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#ff6b9d" title="#ff6b9d"></button>
+              <button onclick="setPresetColor('#4ade80')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#4ade80" title="#4ade80"></button>
+              <button onclick="setPresetColor('#60a5fa')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#60a5fa" title="#60a5fa"></button>
+              <button onclick="setPresetColor('#f59e0b')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#f59e0b" title="#f59e0b"></button>
+              <button onclick="setPresetColor('#ec4899')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#ec4899" title="#ec4899"></button>
+              <button onclick="setPresetColor('#8b5cf6')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#8b5cf6" title="#8b5cf6"></button>
+              <button onclick="setPresetColor('#14b8a6')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#14b8a6" title="#14b8a6"></button>
+              <button onclick="setPresetColor('#f43f5e')" class="w-7 h-7 rounded-lg border-2 border-transparent hover:border-white/40 transition-all" style="background:#f43f5e" title="#f43f5e"></button>
+            </div>
+          </div>
+
+          <!-- Custom BG Image Upload -->
+          <div id="bg-btn-custom_image-row" class="mb-2">
+            <button class="bg-btn w-full" id="bg-btn-custom_image" onclick="selectBg('custom_image')">
+              <i class="fas fa-image"></i>
+              Custom Background Image
+            </button>
+            <div id="bg-image-upload" class="hidden mt-3">
+              <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-dashed border-purple-700/40 bg-purple-900/10 hover:bg-purple-900/20 transition-all">
+                <i class="fas fa-folder-open text-purple-400"></i>
+                <span class="text-sm text-slate-300" id="bg-image-name">Click to upload background image</span>
+                <input type="file" id="bg-image-input" class="hidden" accept="image/*"
+                       onchange="handleBgImageSelect(event)"/>
+              </label>
+            </div>
+          </div>
+
+          <!-- Quality (images only) -->
+          <div id="quality-section">
+            <div class="border-t border-white/5 pt-4 mt-4">
+              <p class="text-slate-400 text-sm mb-3 font-medium">Output Quality</p>
+              <div class="flex gap-3">
+                <button class="bg-btn active" id="quality-btn-standard" onclick="selectQuality('standard')">
+                  <i class="fas fa-image text-sm"></i>Standard
+                </button>
+                <button class="bg-btn" id="quality-btn-4k" onclick="selectQuality('4k')">
+                  <i class="fas fa-gem text-sm"></i>4K Quality
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Process Button -->
+        <button class="btn-process w-full text-center" id="single-process-btn" onclick="processSingleFile()">
+          <i class="fas fa-magic mr-2"></i>Remove Background
+        </button>
+
+      </div>
+
+      <!-- Right Panel: Result -->
+      <div class="glass-card p-6">
+        <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+          <i class="fas fa-eye text-purple-400"></i>Result
+        </h3>
+
+        <!-- Empty state -->
+        <div id="result-empty" class="flex flex-col items-center justify-center py-20 text-center">
+          <div class="w-24 h-24 rounded-2xl flex items-center justify-center mb-4"
+               style="background: rgba(124,58,237,0.1);">
+            <i class="fas fa-wand-magic-sparkles text-4xl text-purple-500/50"></i>
+          </div>
+          <p class="text-slate-500 font-medium">Your result will appear here</p>
+          <p class="text-slate-600 text-sm mt-1">Upload a file and click Remove Background</p>
+        </div>
+
+        <!-- Processing state -->
+        <div id="result-processing" class="hidden py-10 text-center">
+          <div class="w-20 h-20 mx-auto mb-6 relative">
+            <div class="w-20 h-20 rounded-full border-4 border-purple-900 border-t-purple-400 spin"></div>
+            <i class="fas fa-magic absolute inset-0 flex items-center justify-center text-purple-400 text-2xl" style="display:flex"></i>
+          </div>
+          <p class="text-white font-semibold text-lg mb-3" id="processing-text">Processing with AI...</p>
+          <div class="progress-bar mb-2">
+            <div class="progress-fill" id="single-progress-fill" style="width: 5%"></div>
+          </div>
+          <p class="text-slate-500 text-sm" id="progress-label">Analyzing image...</p>
+        </div>
+
+        <!-- Result state -->
+        <div id="result-done" class="hidden fade-in">
+          <!-- Preview -->
+          <div class="checkerboard rounded-xl mb-4 flex items-center justify-center min-h-64 p-4">
+            <img id="result-img" class="result-image" src="" alt="Result"/>
+            <video id="result-video" class="result-image hidden" controls src=""></video>
+          </div>
+
+          <!-- Download options -->
+          <div class="space-y-3">
+            <p class="text-slate-400 text-sm font-medium">Download Options</p>
+            <div class="flex flex-wrap gap-3">
+              <a id="download-standard" href="#" class="btn-download" download>
+                <i class="fas fa-download"></i>Download
+              </a>
+              <a id="download-4k" href="#" class="btn-download secondary" download>
+                <i class="fas fa-gem"></i>Download 4K
+              </a>
+            </div>
+          </div>
+
+          <button class="mt-4 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                  onclick="resetSingle()">
+            <i class="fas fa-redo mr-1"></i>Process Another File
+          </button>
+        </div>
+
+        <!-- Error state -->
+        <div id="result-error" class="hidden py-10 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+               style="background: rgba(239,68,68,0.15);">
+            <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
+          </div>
+          <p class="text-red-400 font-semibold mb-2">Processing Failed</p>
+          <p class="text-slate-500 text-sm" id="error-message"></p>
+          <button class="mt-4 btn-process text-sm" onclick="resetSingle()">Try Again</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- BULK UPLOAD TAB -->
+  <div id="tab-content-bulk" class="hidden fade-in">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 main-grid">
+
+      <!-- Left: Bulk Settings -->
+      <div class="space-y-6">
+
+        <!-- Bulk Upload Zone -->
+        <div class="glass-card p-6">
+          <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+            <i class="fas fa-layer-group text-purple-400"></i>Bulk Upload
+          </h3>
+
+          <div class="upload-zone p-8 text-center"
+               id="bulk-drop-zone"
+               onclick="document.getElementById('bulk-file-input').click()"
+               ondragover="handleDragOver(event, 'bulk-drop-zone')"
+               ondragleave="handleDragLeave('bulk-drop-zone')"
+               ondrop="handleDrop(event, 'bulk')">
+
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center"
+                 style="background: rgba(124,58,237,0.15);">
+              <i class="fas fa-folder-open text-3xl text-purple-400"></i>
+            </div>
+            <p class="text-white font-semibold mb-1">Drop multiple files here</p>
+            <p class="text-slate-400 text-sm mb-3">or click to browse multiple files</p>
+            <span class="stat-badge"><i class="fas fa-infinity"></i> Unlimited files</span>
+          </div>
+          <input type="file" id="bulk-file-input" class="hidden" accept="image/*,video/*" multiple
+                 onchange="handleBulkFileSelect(event)"/>
+
+          <!-- File list -->
+          <div id="bulk-file-list" class="hidden mt-4 space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm text-slate-400 font-medium">
+                <span id="bulk-file-count">0</span> files selected
+              </p>
+              <button onclick="clearBulkFiles()" class="text-xs text-red-400 hover:text-red-300">
+                <i class="fas fa-times mr-1"></i>Clear all
+              </button>
+            </div>
+            <div id="bulk-file-items"></div>
+          </div>
+        </div>
+
+        <!-- Bulk BG Settings -->
+        <div class="glass-card p-6">
+          <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+            <i class="fas fa-palette text-purple-400"></i>Background for All Files
+          </h3>
+
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <button class="bg-btn active" id="bulk-bg-btn-transparent" onclick="selectBulkBg('transparent')">
+              <div class="w-5 h-5 rounded-full border-2 border-dashed border-current opacity-60"></div>
+              Transparent
+            </button>
+            <button class="bg-btn" id="bulk-bg-btn-white" onclick="selectBulkBg('white')">
+              <div class="w-5 h-5 rounded-full border-2 border-white/40" style="background:white"></div>
+              White
+            </button>
+            <button class="bg-btn" id="bulk-bg-btn-black" onclick="selectBulkBg('black')">
+              <div class="w-5 h-5 rounded-full border-2 border-gray-600" style="background:#111"></div>
+              Black
+            </button>
+            <button class="bg-btn" id="bulk-bg-btn-custom" onclick="selectBulkBg('custom')">
+              <i class="fas fa-fill-drip"></i>Custom Color
+            </button>
+          </div>
+
+          <!-- Bulk Custom Color -->
+          <div id="bulk-custom-color-section" class="hidden mb-4">
+            <div class="color-picker-wrap">
+              <input type="color" id="bulk-custom-color-picker" value="#4ade80" onchange="updateBulkCustomColor()"/>
+              <div>
+                <p class="text-white font-semibold text-sm">Pick a Color</p>
+                <p id="bulk-color-hex-display" class="text-slate-400 text-xs">#4ade80</p>
+              </div>
+              <div id="bulk-color-preview-dot" class="w-10 h-10 rounded-lg ml-auto" style="background: #4ade80;"></div>
+            </div>
+          </div>
+
+          <!-- Bulk BG Image -->
+          <button class="bg-btn w-full mb-3" id="bulk-bg-btn-custom_image" onclick="selectBulkBg('custom_image')">
+            <i class="fas fa-image"></i>Custom Background Image
+          </button>
+          <div id="bulk-bg-image-upload" class="hidden">
+            <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer border border-dashed border-purple-700/40 bg-purple-900/10 hover:bg-purple-900/20 transition-all">
+              <i class="fas fa-folder-open text-purple-400"></i>
+              <span class="text-sm text-slate-300" id="bulk-bg-image-name">Click to upload background</span>
+              <input type="file" id="bulk-bg-image-input" class="hidden" accept="image/*"
+                     onchange="handleBulkBgImageSelect(event)"/>
+            </label>
+          </div>
+        </div>
+
+        <!-- Bulk Process Button -->
+        <button class="btn-process w-full" id="bulk-process-btn" onclick="processBulk()">
+          <i class="fas fa-layer-group mr-2"></i>Process All Files
+        </button>
+      </div>
+
+      <!-- Right: Bulk Results -->
+      <div class="glass-card p-6">
+        <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+          <i class="fas fa-archive text-purple-400"></i>Bulk Results
+        </h3>
+
+        <!-- Bulk empty -->
+        <div id="bulk-result-empty" class="flex flex-col items-center justify-center py-20 text-center">
+          <div class="w-24 h-24 rounded-2xl flex items-center justify-center mb-4"
+               style="background: rgba(124,58,237,0.1);">
+            <i class="fas fa-file-zipper text-4xl text-purple-500/50"></i>
+          </div>
+          <p class="text-slate-500 font-medium">Bulk results will appear here</p>
+          <p class="text-slate-600 text-sm mt-1">All processed files will be zipped for download</p>
+        </div>
+
+        <!-- Bulk processing -->
+        <div id="bulk-result-processing" class="hidden py-10 text-center">
+          <div class="w-20 h-20 mx-auto mb-6 relative">
+            <div class="w-20 h-20 rounded-full border-4 border-purple-900 border-t-purple-400 spin"></div>
+          </div>
+          <p class="text-white font-semibold text-lg mb-3">Processing Files...</p>
+          <div class="progress-bar mb-2">
+            <div class="progress-fill" id="bulk-progress-fill" style="width: 5%"></div>
+          </div>
+          <p class="text-slate-500 text-sm" id="bulk-progress-label">Starting...</p>
+        </div>
+
+        <!-- Bulk done -->
+        <div id="bulk-result-done" class="hidden fade-in">
+          <div class="text-center py-10">
+            <div class="w-24 h-24 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                 style="background: rgba(16,185,129,0.15);">
+              <i class="fas fa-check-circle text-5xl text-green-400"></i>
+            </div>
+            <p class="text-white font-bold text-xl mb-2">Processing Complete!</p>
+            <p class="text-slate-400 text-sm mb-6" id="bulk-files-processed">All files processed successfully</p>
+            <a id="bulk-download-zip" href="#" class="btn-download text-base px-8 py-3" download>
+              <i class="fas fa-file-zipper text-lg"></i>
+              Download ZIP Archive
+            </a>
+          </div>
+          <button class="mt-4 text-sm text-slate-500 hover:text-slate-300 transition-colors block mx-auto"
+                  onclick="resetBulk()">
+            <i class="fas fa-redo mr-1"></i>Process More Files
+          </button>
+        </div>
+
+        <!-- Bulk error -->
+        <div id="bulk-result-error" class="hidden py-10 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+               style="background: rgba(239,68,68,0.15);">
+            <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
+          </div>
+          <p class="text-red-400 font-semibold mb-2">Bulk Processing Failed</p>
+          <p class="text-slate-500 text-sm" id="bulk-error-message"></p>
+          <button class="mt-4 btn-process text-sm" onclick="resetBulk()">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div class="mt-20 mb-10">
+    <h3 class="text-center text-2xl font-bold text-white mb-8">Powerful Features</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="feature-card">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+             style="background: rgba(124,58,237,0.2);">
+          <i class="fas fa-brain text-purple-400 text-xl"></i>
+        </div>
+        <h4 class="text-white font-semibold mb-1">AI-Powered</h4>
+        <p class="text-slate-500 text-sm">U2Net deep learning model for accurate edge detection</p>
+      </div>
+      <div class="feature-card">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+             style="background: rgba(16,185,129,0.2);">
+          <i class="fas fa-film text-green-400 text-xl"></i>
+        </div>
+        <h4 class="text-white font-semibold mb-1">Video Support</h4>
+        <p class="text-slate-500 text-sm">Frame-by-frame background removal for videos</p>
+      </div>
+      <div class="feature-card">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+             style="background: rgba(6,182,212,0.2);">
+          <i class="fas fa-gem text-cyan-400 text-xl"></i>
+        </div>
+        <h4 class="text-white font-semibold mb-1">4K Output</h4>
+        <p class="text-slate-500 text-sm">Download images upscaled to 4K resolution</p>
+      </div>
+      <div class="feature-card">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+             style="background: rgba(245,158,11,0.2);">
+          <i class="fas fa-layer-group text-yellow-400 text-xl"></i>
+        </div>
+        <h4 class="text-white font-semibold mb-1">Bulk Processing</h4>
+        <p class="text-slate-500 text-sm">Process unlimited files at once, download as ZIP</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// =====================================================
+// State Management
+// =====================================================
+let singleFile = null;
+let singleBgType = 'transparent';
+let singleQuality = 'standard';
+let singleCustomColor = '#ff6b9d';
+let singleBgImage = null;
+let singleJobId = null;
+let singlePollInterval = null;
+
+let bulkFiles = [];
+let bulkBgType = 'transparent';
+let bulkCustomColor = '#4ade80';
+let bulkBgImage = null;
+let bulkJobId = null;
+let bulkPollInterval = null;
+
+// =====================================================
+// Init
+// =====================================================
+document.addEventListener('DOMContentLoaded', () => {
+  createParticles();
+  checkApiHealth();
+});
+
+function createParticles() {
+  const container = document.getElementById('particles');
+  const colors = ['#7c3aed', '#4f46e5', '#06b6d4', '#10b981'];
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.classList.add('particle');
+    const size = Math.random() * 6 + 2;
+    p.style.cssText = `
+      width: ${size}px; height: ${size}px;
+      left: ${Math.random() * 100}vw;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      animation-duration: ${Math.random() * 20 + 10}s;
+      animation-delay: ${Math.random() * 10}s;
+    `;
+    container.appendChild(p);
+  }
+}
+
+async function checkApiHealth() {
+  try {
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showToast('AI Background Remover is ready!', 'success');
+    }
+  } catch(e) {}
+}
+
+// =====================================================
+// Tab Switching
+// =====================================================
+function switchTab(tab) {
+  document.getElementById('tab-content-single').classList.add('hidden');
+  document.getElementById('tab-content-bulk').classList.add('hidden');
+  document.getElementById('tab-single').classList.remove('active');
+  document.getElementById('tab-bulk').classList.remove('active');
+
+  document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+// =====================================================
+// Drag and Drop
+// =====================================================
+function handleDragOver(e, zoneId) {
+  e.preventDefault();
+  document.getElementById(zoneId).classList.add('drag-over');
+}
+function handleDragLeave(zoneId) {
+  document.getElementById(zoneId).classList.remove('drag-over');
+}
+function handleDrop(e, mode) {
+  e.preventDefault();
+  const zoneId = mode === 'single' ? 'single-drop-zone' : 'bulk-drop-zone';
+  document.getElementById(zoneId).classList.remove('drag-over');
+
+  const files = Array.from(e.dataTransfer.files);
+  if (mode === 'single' && files.length > 0) {
+    setSingleFile(files[0]);
+  } else if (mode === 'bulk') {
+    addBulkFiles(files);
+  }
+}
+
+// =====================================================
+// Single File Handler
+// =====================================================
+function handleSingleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) setSingleFile(file);
+}
+
+function setSingleFile(file) {
+  singleFile = file;
+  document.getElementById('single-upload-placeholder').classList.add('hidden');
+  document.getElementById('single-file-preview').classList.remove('hidden');
+  document.getElementById('single-file-name').textContent = file.name;
+  document.getElementById('single-file-size').textContent = formatBytes(file.size);
+
+  const thumbContainer = document.getElementById('single-thumb-container');
+  thumbContainer.innerHTML = '';
+
+  if (file.type.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.className = 'file-thumb';
+    img.src = URL.createObjectURL(file);
+    thumbContainer.appendChild(img);
+    document.getElementById('quality-section').classList.remove('hidden');
+  } else if (file.type.startsWith('video/')) {
+    const video = document.createElement('video');
+    video.className = 'file-thumb';
+    video.src = URL.createObjectURL(file);
+    video.muted = true;
+    thumbContainer.appendChild(video);
+    document.getElementById('quality-section').classList.add('hidden');
+  }
+}
+
+function clearSingleFile(e) {
+  e.stopPropagation();
+  singleFile = null;
+  document.getElementById('single-upload-placeholder').classList.remove('hidden');
+  document.getElementById('single-file-preview').classList.add('hidden');
+  document.getElementById('single-file-input').value = '';
+}
+
+// =====================================================
+// Background Selection - Single
+// =====================================================
+function selectBg(type) {
+  singleBgType = type;
+  ['transparent','white','black','custom','custom_image'].forEach(t => {
+    const btn = document.getElementById(`bg-btn-${t}`);
+    if (btn) btn.classList.remove('active');
+  });
+  const activeBtn = document.getElementById(`bg-btn-${type}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  document.getElementById('custom-color-section').classList.toggle('hidden', type !== 'custom');
+  document.getElementById('bg-image-upload').classList.toggle('hidden', type !== 'custom_image');
+}
+
+function selectQuality(q) {
+  singleQuality = q;
+  document.getElementById('quality-btn-standard').classList.toggle('active', q === 'standard');
+  document.getElementById('quality-btn-4k').classList.toggle('active', q === '4k');
+}
+
+function updateCustomColor() {
+  const color = document.getElementById('custom-color-picker').value;
+  singleCustomColor = color;
+  document.getElementById('color-hex-display').textContent = color;
+  document.getElementById('color-preview-dot').style.background = color;
+}
+
+function setPresetColor(color) {
+  singleCustomColor = color;
+  document.getElementById('custom-color-picker').value = color;
+  document.getElementById('color-hex-display').textContent = color;
+  document.getElementById('color-preview-dot').style.background = color;
+}
+
+function handleBgImageSelect(e) {
+  const file = e.target.files[0];
+  if (file) {
+    singleBgImage = file;
+    document.getElementById('bg-image-name').textContent = file.name;
+  }
+}
+
+// =====================================================
+// Background Selection - Bulk
+// =====================================================
+function selectBulkBg(type) {
+  bulkBgType = type;
+  ['transparent','white','black','custom','custom_image'].forEach(t => {
+    const btn = document.getElementById(`bulk-bg-btn-${t}`);
+    if (btn) btn.classList.remove('active');
+  });
+  const activeBtn = document.getElementById(`bulk-bg-btn-${type}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  document.getElementById('bulk-custom-color-section').classList.toggle('hidden', type !== 'custom');
+  document.getElementById('bulk-bg-image-upload').classList.toggle('hidden', type !== 'custom_image');
+}
+
+function updateBulkCustomColor() {
+  const color = document.getElementById('bulk-custom-color-picker').value;
+  bulkCustomColor = color;
+  document.getElementById('bulk-color-hex-display').textContent = color;
+  document.getElementById('bulk-color-preview-dot').style.background = color;
+}
+
+function handleBulkBgImageSelect(e) {
+  const file = e.target.files[0];
+  if (file) {
+    bulkBgImage = file;
+    document.getElementById('bulk-bg-image-name').textContent = file.name;
+  }
+}
+
+// =====================================================
+// Bulk File Handler
+// =====================================================
+function handleBulkFileSelect(e) {
+  addBulkFiles(Array.from(e.target.files));
+}
+
+function addBulkFiles(newFiles) {
+  bulkFiles = [...bulkFiles, ...newFiles];
+  renderBulkFiles();
+}
+
+function clearBulkFiles() {
+  bulkFiles = [];
+  document.getElementById('bulk-file-list').classList.add('hidden');
+  document.getElementById('bulk-file-input').value = '';
+  renderBulkFiles();
+}
+
+function renderBulkFiles() {
+  const list = document.getElementById('bulk-file-list');
+  const items = document.getElementById('bulk-file-items');
+  document.getElementById('bulk-file-count').textContent = bulkFiles.length;
+
+  if (bulkFiles.length === 0) {
+    list.classList.add('hidden');
+    return;
+  }
+  list.classList.remove('hidden');
+  items.innerHTML = '';
+
+  bulkFiles.forEach((file, i) => {
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-3 p-2 rounded-lg bg-white/3 border border-white/5';
+    const icon = file.type.startsWith('video/') ? 'fa-film text-indigo-400' : 'fa-image text-purple-400';
+    div.innerHTML = `
+      <i class="fas ${icon} text-sm w-5"></i>
+      <span class="text-sm text-slate-300 truncate flex-1">${file.name}</span>
+      <span class="text-xs text-slate-500">${formatBytes(file.size)}</span>
+      <button onclick="removeBulkFile(${i})" class="text-red-400/60 hover:text-red-400 text-xs ml-1">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    items.appendChild(div);
+  });
+}
+
+function removeBulkFile(index) {
+  bulkFiles.splice(index, 1);
+  renderBulkFiles();
+}
+
+// =====================================================
+// Process Single File
+// =====================================================
+async function processSingleFile() {
+  if (!singleFile) {
+    showToast('Please upload a file first!', 'error');
+    return;
+  }
+
+  const isVideo = singleFile.type.startsWith('video/');
+  const endpoint = isVideo ? '/api/process/video' : '/api/process/image';
+
+  showSingleState('processing');
+  document.getElementById('single-process-btn').disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', singleFile);
+  formData.append('bgType', singleBgType);
+  formData.append('quality', singleQuality);
+
+  if (singleBgType === 'custom') {
+    formData.append('bgColor', singleCustomColor);
+  }
+  if (singleBgType === 'custom_image' && singleBgImage) {
+    formData.append('bgImage', singleBgImage);
+  }
+
+  try {
+    const res = await fetch(endpoint, { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      showSingleState('error');
+      document.getElementById('error-message').textContent = data.error;
+      return;
+    }
+
+    singleJobId = data.jobId;
+    startPolling();
+  } catch(e) {
+    showSingleState('error');
+    document.getElementById('error-message').textContent = e.message;
+  }
+}
+
+function startPolling() {
+  let dots = 0;
+  const messages = [
+    'Analyzing image with AI...',
+    'Detecting edges and subjects...',
+    'Removing background pixels...',
+    'Applying background...',
+    'Finalizing result...'
+  ];
+  let msgIdx = 0;
+
+  singlePollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/job/${singleJobId}`);
+      const job = await res.json();
+
+      // Update progress
+      const fill = document.getElementById('single-progress-fill');
+      fill.style.width = `${Math.max(5, job.progress)}%`;
+      document.getElementById('progress-label').textContent = messages[Math.min(msgIdx, messages.length - 1)];
+      msgIdx = (msgIdx + 1) % messages.length;
+
+      if (job.status === 'done') {
+        clearInterval(singlePollInterval);
+        showSingleResult(job);
+      } else if (job.status === 'error') {
+        clearInterval(singlePollInterval);
+        showSingleState('error');
+        document.getElementById('error-message').textContent = job.error || 'Processing failed';
+        document.getElementById('single-process-btn').disabled = false;
+      }
+    } catch(e) {}
+  }, 1500);
+}
+
+function showSingleResult(job) {
+  showSingleState('done');
+  document.getElementById('single-process-btn').disabled = false;
+
+  const resultFile = job.result;
+  const isVideo = resultFile.endsWith('.mp4') || resultFile.endsWith('.webm');
+  const downloadUrl = `/api/download/${resultFile}`;
+
+  if (isVideo) {
+    document.getElementById('result-img').classList.add('hidden');
+    const vid = document.getElementById('result-video');
+    vid.classList.remove('hidden');
+    vid.src = downloadUrl;
+    document.getElementById('download-4k').style.display = 'none';
+  } else {
+    document.getElementById('result-video').classList.add('hidden');
+    const img = document.getElementById('result-img');
+    img.classList.remove('hidden');
+    img.src = downloadUrl;
+    document.getElementById('download-4k').style.display = '';
+  }
+
+  // Setup downloads
+  document.getElementById('download-standard').href = downloadUrl;
+  document.getElementById('download-standard').download = `bg_removed_${resultFile}`;
+
+  // 4K: re-process at 4k quality
+  document.getElementById('download-4k').href = downloadUrl;
+  document.getElementById('download-4k').download = `bg_removed_4k_${resultFile}`;
+  document.getElementById('download-4k').onclick = async (e) => {
+    if (singleQuality !== '4k') {
+      e.preventDefault();
+      await process4KDownload();
+    }
+  };
+
+  showToast('Background removed successfully! 🎉', 'success');
+}
+
+async function process4KDownload() {
+  if (!singleFile) return;
+  showToast('Generating 4K version...', 'info');
+
+  const formData = new FormData();
+  formData.append('file', singleFile);
+  formData.append('bgType', singleBgType);
+  formData.append('quality', '4k');
+  if (singleBgType === 'custom') formData.append('bgColor', singleCustomColor);
+  if (singleBgType === 'custom_image' && singleBgImage) formData.append('bgImage', singleBgImage);
+
+  try {
+    const res = await fetch('/api/process/image', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.jobId) {
+      // Poll for 4K result
+      const poll4k = setInterval(async () => {
+        const jr = await fetch(`/api/job/${data.jobId}`);
+        const job = await jr.json();
+        if (job.status === 'done') {
+          clearInterval(poll4k);
+          const a = document.createElement('a');
+          a.href = `/api/download/${job.result}`;
+          a.download = `bg_removed_4k_${job.result}`;
+          a.click();
+          showToast('4K download ready!', 'success');
+        }
+      }, 1500);
+    }
+  } catch(e) {
+    showToast('4K generation failed', 'error');
+  }
+}
+
+function showSingleState(state) {
+  ['empty','processing','done','error'].forEach(s => {
+    document.getElementById(`result-${s}`).classList.add('hidden');
+  });
+  document.getElementById(`result-${state}`).classList.remove('hidden');
+}
+
+function resetSingle() {
+  clearInterval(singlePollInterval);
+  singleJobId = null;
+  showSingleState('empty');
+  clearSingleFile({ stopPropagation: () => {} });
+  document.getElementById('single-process-btn').disabled = false;
+}
+
+// =====================================================
+// Process Bulk
+// =====================================================
+async function processBulk() {
+  if (bulkFiles.length === 0) {
+    showToast('Please upload files first!', 'error');
+    return;
+  }
+
+  showBulkState('processing');
+  document.getElementById('bulk-process-btn').disabled = true;
+
+  const formData = new FormData();
+  bulkFiles.forEach(file => formData.append('files', file));
+  formData.append('bgType', bulkBgType);
+
+  if (bulkBgType === 'custom') {
+    formData.append('bgColor', bulkCustomColor);
+  }
+  if (bulkBgType === 'custom_image' && bulkBgImage) {
+    formData.append('bgImage', bulkBgImage);
+  }
+
+  try {
+    const res = await fetch('/api/process/bulk', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      showBulkState('error');
+      document.getElementById('bulk-error-message').textContent = data.error;
+      return;
+    }
+
+    bulkJobId = data.jobId;
+    startBulkPolling(data.fileCount);
+  } catch(e) {
+    showBulkState('error');
+    document.getElementById('bulk-error-message').textContent = e.message;
+  }
+}
+
+function startBulkPolling(totalFiles) {
+  bulkPollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/job/${bulkJobId}`);
+      const job = await res.json();
+
+      const fill = document.getElementById('bulk-progress-fill');
+      fill.style.width = `${Math.max(5, job.progress)}%`;
+      document.getElementById('bulk-progress-label').textContent =
+        `Processing... ${Math.round(job.progress)}% complete`;
+
+      if (job.status === 'done') {
+        clearInterval(bulkPollInterval);
+        showBulkResult(job, totalFiles);
+      } else if (job.status === 'error') {
+        clearInterval(bulkPollInterval);
+        showBulkState('error');
+        document.getElementById('bulk-error-message').textContent = job.error || 'Processing failed';
+        document.getElementById('bulk-process-btn').disabled = false;
+      }
+    } catch(e) {}
+  }, 2000);
+}
+
+function showBulkResult(job, totalFiles) {
+  showBulkState('done');
+  document.getElementById('bulk-process-btn').disabled = false;
+
+  const count = job.results ? job.results.length : totalFiles;
+  document.getElementById('bulk-files-processed').textContent =
+    `${count} file${count !== 1 ? 's' : ''} processed successfully`;
+
+  const downloadLink = document.getElementById('bulk-download-zip');
+  downloadLink.href = `/api/download/${job.result}`;
+  downloadLink.download = `bg_removed_bulk_${new Date().toISOString().slice(0,10)}.zip`;
+
+  showToast(`${count} files processed! ZIP ready for download 🎉`, 'success');
+}
+
+function showBulkState(state) {
+  ['empty','processing','done','error'].forEach(s => {
+    const el = document.getElementById(`bulk-result-${s}`);
+    if (el) el.classList.add('hidden');
+  });
+  document.getElementById(`bulk-result-${state}`).classList.remove('hidden');
+}
+
+function resetBulk() {
+  clearInterval(bulkPollInterval);
+  bulkJobId = null;
+  showBulkState('empty');
+  clearBulkFiles();
+  document.getElementById('bulk-process-btn').disabled = false;
+}
+
+// =====================================================
+// Utility
+// =====================================================
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+let toastTimeout;
+function showToast(message, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  clearTimeout(toastTimeout);
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
+  toast.innerHTML = `<i class="fas fa-${icons[type]} mr-2"></i>${message}`;
+  document.body.appendChild(toast);
+
+  toastTimeout = setTimeout(() => toast.remove(), 4000);
+}
+</script>
+</body>
+</html>
